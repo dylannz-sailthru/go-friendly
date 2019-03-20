@@ -29,8 +29,12 @@ func implementation() error {
 func TestConstructor(t *testing.T) {
 	err := implementation()
 
-	if User(err) != ErrUser {
-		log.Fatalf("expected err to be: %v, got: %v", ErrUser, User(err))
+	e, ok := err.(*Error)
+	if !ok {
+		log.Fatalf("expected err to be of type *Error, was: %T", err)
+	}
+	if e.User != ErrUser {
+		log.Fatalf("expected err to be: %v, got: %v", ErrUser, e.User)
 	}
 
 	if Cause(err) != ErrSecret {
@@ -39,13 +43,29 @@ func TestConstructor(t *testing.T) {
 }
 
 func TestUserCauseWithThirdPartyError(t *testing.T) {
-	err := errors.New("generic error")
+	c := errors.New("generic error")
+	err := NewError(c, nil)
 
-	if User(err) != err {
-		log.Fatalf("expected err to be: %v, got: %v", err, User(err))
+	e, ok := err.(*Error)
+	if !ok {
+		log.Fatalf("expected err to be of type *Error, was: %T", err)
+	}
+	if e.User != c {
+		log.Fatalf("expected err to be: %v, got: %v", c, e.User)
 	}
 
-	if Cause(err) != err {
-		log.Fatalf("expected cause to be: %v, got: %v", err, User(err))
+	if Cause(err) != c {
+		log.Fatalf("expected cause to be: %v, got: %v", c, e.Cause)
+	}
+}
+
+func TestConstructorWithNilUserError(t *testing.T) {
+	err := NewError(nil, nil)
+	if err != nil {
+		log.Fatalf("expected err to be nil, got: %v", err)
+	}
+	err = NewError(nil, errors.New("some error"))
+	if err != nil {
+		log.Fatalf("expected err to be nil, got: %v", err)
 	}
 }
