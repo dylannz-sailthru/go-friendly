@@ -33,12 +33,12 @@ func TestConstructor(t *testing.T) {
 	if !ok {
 		log.Fatalf("expected err to be of type *Error, was: %T", err)
 	}
-	if e.User != ErrUser {
-		log.Fatalf("expected err to be: %v, got: %v", ErrUser, e.User)
+	if e.UserError() != ErrUser.Error() {
+		log.Fatalf("expected err to be: %v, got: %v", ErrUser.Error(), e.UserError())
 	}
 
-	if Cause(err) != ErrSecret {
-		log.Fatalf("expected cause to be: %v, got: %v", ErrSecret, Cause(err))
+	if err.Error() != ErrSecret.Error() {
+		log.Fatalf("expected cause to be: %v, got: %v", ErrSecret.Error(), err.Error())
 	}
 }
 
@@ -50,12 +50,12 @@ func TestUserCauseWithThirdPartyError(t *testing.T) {
 	if !ok {
 		log.Fatalf("expected err to be of type *Error, was: %T", err)
 	}
-	if e.User != c {
-		log.Fatalf("expected err to be: %v, got: %v", c, e.User)
+	if e.UserError() != c.Error() {
+		log.Fatalf("expected err to be: %v, got: %v", c.Error(), e.UserError())
 	}
 
-	if Cause(err) != c {
-		log.Fatalf("expected cause to be: %v, got: %v", c, e.Cause)
+	if err.Error() != c.Error() {
+		log.Fatalf("expected cause to be: %v, got: %v", c.Error(), err.Error())
 	}
 }
 

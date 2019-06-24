@@ -1,46 +1,73 @@
 package errors
 
+import "errors"
+
 type Error struct {
-	User  error
-	Cause error
+	error     error
+	userError error
 }
 
-type ErrCauser interface {
-	Error() string
-	Cause() string
+func (e Error) Error() string {
+	return e.error.Error()
 }
 
-// Error calls the user .Error method. The design is to return the user-safe
-// error by default.
-func (s Error) Error() string {
-	return s.User.Error()
+func (e Error) UserError() string {
+	return e.userError.Error()
 }
 
-// Cause takes any error and will return the underlying cause (if it's an
-// instance of the Error struct in this package).
-//
-// Could be an improvement to cast to an interface instead of a concrete type,
-// would allow for more flexibility.
-func Cause(err error) error {
-	e, ok := err.(*Error)
-	if ok {
-		return e.Cause
+// Cause takes any error and will return the first user-friendly error it finds
+// as it traverses up through the linked list. If there are no user-friendly
+// causes found, nil is returned.
+func User(err error) error {
+	type errCauser interface {
+		Cause() error
+	}
+	type errUser interface {
+		UserError() error
 	}
 
-	return err
+	for err != nil {
+		user, ok := err.(errUser)
+		if ok {
+			return user.UserError()
+		}
+
+		cause, ok := err.(errCauser)
+		if !ok {
+			break
+		}
+		err = cause.Cause()
+	}
+
+	return nil
 }
 
-func NewError(user, cause error) error {
+func NewError(user, err error) error {
 	if user == nil {
 		return nil
 	}
 
-	if cause == nil {
-		cause = user
+	if err == nil {
+		err = user
 	}
 
 	return &Error{
-		User:  user,
-		Cause: cause,
+		error:     err,
+		userError: user,
+	}
+}
+
+func NewErrorString(user, err string) error {
+	if user == "" {
+		return nil
+	}
+
+	if err == "" {
+		err = user
+	}
+
+	return &Error{
+		error:     errors.New(err),
+		userError: errors.New(user),
 	}
 }
