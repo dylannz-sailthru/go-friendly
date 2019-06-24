@@ -1,6 +1,10 @@
 package errors
 
-import "errors"
+import (
+	"errors"
+)
+
+var DefaultUserError = errors.New("Something went wrong.")
 
 type Error struct {
 	error     error
@@ -11,8 +15,8 @@ func (e Error) Error() string {
 	return e.error.Error()
 }
 
-func (e Error) UserError() string {
-	return e.userError.Error()
+func (e Error) UserError() error {
+	return e.userError
 }
 
 // Cause takes any error and will return the first user-friendly error it finds
@@ -42,13 +46,13 @@ func User(err error) error {
 	return nil
 }
 
-func NewError(user, err error) error {
-	if user == nil {
+func NewError(err, user error) error {
+	if err == nil {
 		return nil
 	}
 
-	if err == nil {
-		err = user
+	if user == nil {
+		user = DefaultUserError
 	}
 
 	return &Error{
@@ -57,13 +61,9 @@ func NewError(user, err error) error {
 	}
 }
 
-func NewErrorString(user, err string) error {
-	if user == "" {
-		return nil
-	}
-
+func NewErrorString(err, user string) error {
 	if err == "" {
-		err = user
+		return nil
 	}
 
 	return &Error{
