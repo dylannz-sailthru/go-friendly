@@ -2,6 +2,7 @@ package friendly
 
 import (
 	"errors"
+	"fmt"
 )
 
 var DefaultUserError = errors.New("Something went wrong")
@@ -90,4 +91,16 @@ func Friendly(err error) error {
 	}
 
 	return nil
+}
+
+// Wrap is a convience method to easily add a friendly message for an existing
+// error.
+func Wrap(cause error, friendly string) error {
+	return New().WithCause(cause).WithFriendlyString(friendly).Err()
+}
+
+// Wrapf is a convience method to easily add a friendly message for an existing
+// error.
+func Wrapf(cause error, friendly string, a ...interface{}) error {
+	return New().WithCause(cause).WithFriendlyString(fmt.Sprintf(friendly, a...)).Err()
 }
