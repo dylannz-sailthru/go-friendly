@@ -3,6 +3,8 @@ package friendly
 import (
 	"errors"
 	"fmt"
+
+	"github.com/hashicorp/errwrap"
 )
 
 var DefaultUserError = errors.New("Something went wrong")
@@ -66,31 +68,65 @@ func (e Error) Error() string {
 	return e.cause.Error()
 }
 
-// Friendly takes any error and will return the first user-friendly error it finds
-// as it traverses up through the linked list. If there are no user-friendly
-// causes found, nil is returned.
-func Friendly(err error) error {
-	type errCauser interface {
-		Cause() error
+func unwrap(err error) []error {
+	// support standard library Unwrap()
+	if e, ok := err.(interface {
+		Unwrap() error
+	}); ok {
+		if unwrapped := e.Unwrap(); e != nil {
+			return []error{unwrapped}
+		}
+		return nil
 	}
+
+	// support legacy pkg/errors Cause()
+	if e, ok := err.(interface {
+		Cause() error
+	}); ok {
+		if unwrapped := e.Cause(); e != nil {
+			return []error{unwrapped}
+		}
+		return nil
+	}
+
+	// support legacy hashicorp errwrap (before they added support for Unwrap())
+	if e, ok := err.(errwrap.Wrapper); ok {
+		return e.WrappedErrors()
+	}
+
+	return nil
+}
+
+func friendly(errs []error) error {
 	type errFriendlyer interface {
 		Friendly() error
 	}
 
-	for err != nil {
-		user, ok := err.(errFriendlyer)
-		if ok {
-			return user.Friendly()
+	nextErrs := []error{}
+	for _, err := range errs {
+		if err == nil {
+			continue
 		}
 
-		cause, ok := err.(errCauser)
-		if !ok {
-			break
+		if e, ok := err.(errFriendlyer); ok {
+			return e.Friendly()
 		}
-		err = cause.Cause()
+
+		nextErrs = append(nextErrs, unwrap(err)...)
+	}
+
+	if len(nextErrs) > 0 {
+		return friendly(nextErrs)
 	}
 
 	return nil
+}
+
+// Friendly takes any error and will return the first user-friendly error it finds
+// as it traverses up through the linked list. If there are no user-friendly
+// causes found, nil is returned.
+func Friendly(err error) error {
+	return friendly([]error{err})
 }
 
 // Wrap is a convience method to easily add a friendly message for an existing

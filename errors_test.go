@@ -4,8 +4,10 @@ import (
 	"log"
 	"testing"
 
+	"errors"
+
 	. "github.com/dylannz-sailthru/go-friendly"
-	"github.com/pkg/errors"
+	pkgErrors "github.com/pkg/errors"
 )
 
 var (
@@ -43,7 +45,7 @@ func TestConstructor(t *testing.T) {
 }
 
 func TestUserCauseWithThirdPartyError(t *testing.T) {
-	c := errors.New("generic error")
+	c := New().WithCauseString("generic error")
 	err := New().WithCause(c).Err()
 
 	e, ok := err.(Error)
@@ -73,9 +75,29 @@ func TestConstructorWithNilCause(t *testing.T) {
 	}
 }
 
+type unwrappableError struct {
+	msg   string
+	cause error
+}
+
+func (e unwrappableError) Error() string {
+	return e.msg + ": " + e.cause.Error()
+}
+
+func (e unwrappableError) Unwrap() error {
+	return e.cause
+}
+
+func wrap(err error, str string) error {
+	return unwrappableError{
+		cause: err,
+		msg:   str,
+	}
+}
+
 func TestUser(t *testing.T) {
 	err := New().WithCause(ErrCause).WithFriendly(ErrFriendly).Err()
-	wrapped := errors.Wrap(err, "some wrapper")
+	wrapped := wrap(err, "some wrapper")
 
 	if ErrFriendly != Friendly(wrapped) {
 		log.Fatalf("expected unwrapped user error (%v) to equal original user err (%v)", Friendly(wrapped), ErrFriendly)
@@ -84,9 +106,47 @@ func TestUser(t *testing.T) {
 
 func TestUserWithNonUserError(t *testing.T) {
 	err := errors.New("some non-user error")
-	wrapped := errors.Wrap(err, "some wrapper")
+	wrapped := wrap(err, "some wrapper")
 
 	if Friendly(wrapped) != nil {
 		log.Fatalf("expected unwrapped user error (%v) to be nil", Friendly(wrapped))
+	}
+}
+
+func TestPkgErrorsUser(t *testing.T) {
+	err := New().WithCause(ErrCause).WithFriendly(ErrFriendly).Err()
+	wrapped := pkgErrors.Wrap(err, "some wrapper")
+
+	if ErrFriendly != Friendly(wrapped) {
+		log.Fatalf("expected unwrapped user error (%v) to equal original user err (%v)", Friendly(wrapped), ErrFriendly)
+	}
+}
+
+type hashicorpErrwrappable struct {
+	msg   string
+	cause error
+}
+
+func (e hashicorpErrwrappable) Error() string {
+	return e.msg + ": " + e.cause.Error()
+}
+
+func (e hashicorpErrwrappable) WrappedErrors() []error {
+	return []error{e.cause}
+}
+
+func hashicorpErrwrap(err error, str string) error {
+	return hashicorpErrwrappable{
+		cause: err,
+		msg:   str,
+	}
+}
+
+func TestHashicorpErrwrap(t *testing.T) {
+	err := New().WithCause(ErrCause).WithFriendly(ErrFriendly).Err()
+	wrapped := hashicorpErrwrap(err, "some wrapper")
+
+	if ErrFriendly != Friendly(wrapped) {
+		log.Fatalf("expected unwrapped user error (%v) to equal original user err (%v)", Friendly(wrapped), ErrFriendly)
 	}
 }
