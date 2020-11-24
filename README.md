@@ -4,6 +4,12 @@ go-friendly is a go package that lets you accompany your internal error
 messages with more friendly messages, that are suitable for and end-user to
 see.
 
+[Documentation](https://godoc.org/github.com/dylannz-sailthru/go-friendly)
+
+License: MIT
+
+## Example usage
+
 For example, you may have encountered a database connection error that you want
 to log out, but don't want to return to the user. That message might look like:
 
@@ -53,7 +59,3 @@ if f := friendly.Friendly(err); f != nil {
   fmt.Println(f.Error()) // We encountered an internal error while trying to process your request. Please try again later :(
 }
 ```
-
-## License
-
-MIT
